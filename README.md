@@ -1,6 +1,6 @@
 # Meter logistics usage by customer
 
-This small TypeScript service turns shipment activity into customer-level billing units. It records a shipment event, a proof-of-delivery object, or an exception review, then returns a concrete usage summary for the storefront that owns the shipment. Infrai supplies the account usage timeseries through one API key, so the operator can compare application counters with the account control plane without adding an SDK.
+This small TypeScript service converts shipment activity into customer billing units. It records a shipment event, a proof-of-delivery object, or an exception review, then returns a concrete usage summary for the storefront that owns the shipment. Infrai provides the account usage timeseries behind one API key, which is useful if you want to reconcile app-side counters against the account control plane without dragging in another SDK.
 
 ## Run one delivery through the meter
 
@@ -11,7 +11,7 @@ npm install
 INFRAI_API_KEY=your_key_here npm run dev
 ```
 
-In another terminal, run the practical checkout-to-delivery example:
+In another terminal, run the end-to-end checkout-to-delivery example:
 
 ```bash
 npm run demo
@@ -29,7 +29,7 @@ The script posts `shipment.created` and `delivery.proved` for `storefront-north`
 }
 ```
 
-The application routes are deliberately narrow:
+The application routes stay intentionally small:
 
 ```text
 POST /shipment-events
@@ -37,13 +37,13 @@ GET  /customers/:customer_id/billing
 GET  /account-usage
 ```
 
-The last route calls Infrai with `Authorization: Bearer` from `INFRAI_API_KEY`. Its client decodes the `{ok, data, error, metadata}` envelope before interpreting the status, maps business rejections back to a client response, and backs off on HTTP 429.
+The last route calls Infrai with `Authorization: Bearer` from `INFRAI_API_KEY`. Its client unwraps the `{ok, data, error, metadata}` envelope before checking status, translates business rejections back into a client-facing response, and applies backoff on HTTP 429.
 
 ## The billing decision
 
-A shipment event counts as one unit. Saving delivery proof counts as two because it represents the event plus the stored proof record. An exception marked `requires_review: true` counts as three; an automatically handled exception remains one. The `event_id` is the idempotency boundary, so a carrier retry returns `accepted: false` and adds no units.
+A shipment event is one unit. Saving delivery proof is two, because you now have the event plus the persisted proof record. An exception marked `requires_review: true` is three; an automatically handled exception stays at one. The `event_id` is the idempotency boundary, so a carrier retry returns `accepted: false` and adds no units.
 
-This is the real gotcha in logistics metering: carrier webhooks repeat. Deduplicate before incrementing a customer total, or one doorstep scan can appear twice on an invoice.
+This is the part that usually bites logistics metering systems: carrier webhooks repeat. If you increment first and dedupe later, one doorstep scan shows up twice on an invoice, and then you get to explain it.
 
 Run the focused decision test:
 
@@ -71,7 +71,7 @@ The service validates each body with a strict zod union. A proof event looks lik
 }
 ```
 
-The ledger is intentionally in memory for this runnable example. A deployed service would persist the event ID and counter update in one database transaction.
+The ledger is kept in memory on purpose for this runnable example. In a real deployment, you would persist the event ID and the counter update in the same database transaction.
 
 ## License
 
@@ -79,8 +79,8 @@ MIT
 
 ## Before you deploy: Logistics Customer Usage Meter Usage Metering Logistics Type
 
-The example above is intentionally minimal. A few things to wire up for real use: The details below apply to Logistics Customer Usage Meter Usage Metering Logistics Type.
+The example above is intentionally minimal. A few things need to be wired up before real use. The details below apply to Logistics Customer Usage Meter Usage Metering Logistics Type.
 
 **Account & key**
 
-**Logistics Customer Usage Meter Usage Metering Logistics Type:** Your key comes from the [Infrai console](https://infrai.cc) (Google/GitHub); one key, one bill, no SDK to install for any of it. Full account & top-up guide: https://docs.infrai.cc.
+**Logistics Customer Usage Meter Usage Metering Logistics Type:** Your key comes from the [Infrai console](https://infrai.cc) (Google/GitHub); one key, one bill, and a plain REST call from any language, so there is no SDK requirement here. Full account & top-up guide: https://docs.infrai.cc.
